@@ -7,7 +7,7 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
         .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
+        h2, h3 { text-align: center; color: #333; margin-top: 0; }
         
         /* Стили для форм */
         input, button, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
@@ -19,15 +19,22 @@
         /* Скрытые элементы */
         .hidden { display: none; }
         
-        /* Стили дашборда */
-        .dashboard { display: flex; justify-content: space-between; background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        /* Стили дашборда и блоков */
+        .dashboard, .goal-section { display: flex; justify-content: space-between; background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; }
         .dashboard div { text-align: center; width: 30%; }
+        .goal-section { display: block; }
+        
         .transaction-list { list-style: none; padding: 0; }
-        .transaction-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; }
+        .transaction-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; align-items: center; }
         .income-text { color: #28a745; font-weight: bold; }
         .expense-text { color: #dc3545; font-weight: bold; }
         
-        .header-top { display: flex; justify-content: space-between; align-items: center; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        
+        /* Прогресс-бар */
+        .progress-container { background: #ddd; border-radius: 5px; height: 20px; margin: 10px 0; overflow: hidden; width: 100%; }
+        .progress-bar { background: #28a745; height: 100%; width: 0%; transition: width 0.3s; }
+        .calc-results { background: #fff; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.9em; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
@@ -47,7 +54,6 @@
             <h2 style="margin: 0;">Ваши финансы</h2>
             <button onclick="logout()" class="btn-danger" style="width: auto; padding: 5px 15px; margin: 0;">Выйти (<span id="current-user-display"></span>)</button>
         </div>
-        <hr>
 
         <div class="dashboard">
             <div>
@@ -64,6 +70,27 @@
             </div>
         </div>
 
+        <!-- Цель накоплений -->
+        <div class="goal-section">
+            <h3>План накоплений</h3>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="goal-amount" placeholder="Сумма цели (₽)" oninput="updateGoalUI()">
+                <input type="date" id="goal-date" onchange="updateGoalUI()">
+            </div>
+            
+            <div class="progress-container">
+                <div id="goal-progress-bar" class="progress-bar"></div>
+            </div>
+            <p id="goal-text" style="text-align: center; margin: 5px 0;">Прогресс: 0%</p>
+            
+            <div id="goal-calculations" class="calc-results hidden">
+                <strong>Нужно откладывать:</strong><br>
+                В день: <span id="calc-day">0</span> ₽<br>
+                В неделю: <span id="calc-week">0</span> ₽<br>
+                В месяц: <span id="calc-month">0</span> ₽
+            </div>
+        </div>
+
         <!-- Добавление транзакции -->
         <h3>Добавить операцию</h3>
         <select id="type">
@@ -75,15 +102,18 @@
         <button onclick="addTransaction()">Добавить</button>
 
         <!-- История -->
-        <h3>История операций</h3>
+        <h3 style="margin-top: 20px;">История операций</h3>
         <ul id="transaction-list" class="transaction-list"></ul>
     </div>
 
     <script>
         let currentUser = null;
-        let transactions = [];
+        let userData = {
+            transactions: [],
+            goalAmount: '',
+            goalDate: ''
+        };
 
-        // Проверка, есть ли уже активная сессия при загрузке страницы
         window.onload = function() {
             const savedUser = localStorage.getItem('activeSession');
             if (savedUser) {
@@ -92,7 +122,6 @@
             }
         };
 
-        // Логика авторизации
         function login() {
             const usernameInput = document.getElementById('username').value.trim();
             if (usernameInput === '') {
@@ -101,33 +130,28 @@
             }
             
             currentUser = usernameInput;
-            localStorage.setItem('activeSession', currentUser); // Запоминаем сессию
+            localStorage.setItem('activeSession', currentUser);
             document.getElementById('current-user-display').innerText = currentUser;
             
-            // Загружаем данные пользователя
             loadData();
 
-            // Переключаем экраны
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
         }
 
-        // Логика выхода
         function logout() {
+            saveData(); // Сохраняем перед выходом на всякий случай
             currentUser = null;
-            transactions = [];
+            userData = { transactions: [], goalAmount: '', goalDate: '' };
             localStorage.removeItem('activeSession');
             
-            // Очищаем поля ввода
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
             
-            // Переключаем экраны
             document.getElementById('app-screen').classList.add('hidden');
             document.getElementById('login-screen').classList.remove('hidden');
         }
 
-        // Добавление транзакции
         function addTransaction() {
             const type = document.getElementById('type').value;
             const description = document.getElementById('description').value;
@@ -138,48 +162,51 @@
                 return;
             }
 
-            const transaction = { id: Date.now(), type, description, amount };
-            transactions.push(transaction);
+            userData.transactions.push({ id: Date.now(), type, description, amount });
             
-            saveData();
-            updateUI();
-            
-            // Очистка полей
             document.getElementById('description').value = '';
             document.getElementById('amount').value = '';
-        }
-
-        // Удаление транзакции
-        function deleteTransaction(id) {
-            transactions = transactions.filter(t => t.id !== id);
-            saveData();
+            
             updateUI();
         }
 
-        // Сохранение данных в localStorage (привязка к логину)
-        function saveData() {
-            if (!currentUser) return;
-            localStorage.setItem('financeData_' + currentUser, JSON.stringify(transactions));
+        function deleteTransaction(id) {
+            userData.transactions = userData.transactions.filter(t => t.id !== id);
+            updateUI();
         }
 
-        // Загрузка данных из localStorage
+        function saveData() {
+            if (!currentUser) return;
+            // Сохраняем текущие значения инпутов цели перед записью
+            userData.goalAmount = document.getElementById('goal-amount').value;
+            userData.goalDate = document.getElementById('goal-date').value;
+            localStorage.setItem('financeData_' + currentUser, JSON.stringify(userData));
+        }
+
         function loadData() {
             const savedData = localStorage.getItem('financeData_' + currentUser);
             if (savedData) {
-                transactions = JSON.parse(savedData);
+                userData = JSON.parse(savedData);
+                // Восстанавливаем старые данные, если они были сохранены в старом формате (только массив транзакций)
+                if (Array.isArray(userData)) {
+                    userData = { transactions: userData, goalAmount: '', goalDate: '' };
+                }
             } else {
-                transactions = []; // Если новый пользователь
+                userData = { transactions: [], goalAmount: '', goalDate: '' };
             }
+            
+            document.getElementById('goal-amount').value = userData.goalAmount || '';
+            document.getElementById('goal-date').value = userData.goalDate || '';
+            
             updateUI();
         }
 
-        // Обновление интерфейса (цифры и списки)
         function updateUI() {
             let income = 0, expense = 0;
             const list = document.getElementById('transaction-list');
             list.innerHTML = '';
 
-            transactions.forEach(t => {
+            userData.transactions.forEach(t => {
                 if (t.type === 'income') income += t.amount;
                 if (t.type === 'expense') expense += t.amount;
 
@@ -201,6 +228,70 @@
             const balance = income - expense;
             document.getElementById('total-balance').innerText = balance + ' ₽';
             document.getElementById('total-balance').style.color = balance >= 0 ? '#28a745' : '#dc3545';
+            
+            updateGoalUI(balance);
+            saveData(); // Сохраняем состояние при любом обновлении UI
+        }
+
+        function updateGoalUI(currentBalance) {
+            // Если баланс не передан в функцию, высчитываем его
+            if (currentBalance === undefined) {
+                let inc = 0, exp = 0;
+                userData.transactions.forEach(t => {
+                    if (t.type === 'income') inc += t.amount;
+                    if (t.type === 'expense') exp += t.amount;
+                });
+                currentBalance = inc - exp;
+            }
+
+            const goalAmount = parseFloat(document.getElementById('goal-amount').value);
+            const goalDateStr = document.getElementById('goal-date').value;
+            const calcBox = document.getElementById('goal-calculations');
+
+            // Обновляем прогресс-бар
+            if (!isNaN(goalAmount) && goalAmount > 0) {
+                let percent = (currentBalance / goalAmount) * 100;
+                if (percent < 0) percent = 0;
+                if (percent > 100) percent = 100;
+                
+                document.getElementById('goal-progress-bar').style.width = percent + '%';
+                document.getElementById('goal-text').innerText = `Прогресс: ${percent.toFixed(1)}% (${currentBalance} из ${goalAmount} ₽)`;
+            } else {
+                document.getElementById('goal-progress-bar').style.width = '0%';
+                document.getElementById('goal-text').innerText = 'Прогресс: 0%';
+            }
+
+            // Расчеты по дате
+            if (!isNaN(goalAmount) && goalAmount > 0 && goalDateStr) {
+                const goalDate = new Date(goalDateStr);
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                
+                const timeDiff = goalDate.getTime() - today.getTime();
+                const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                const amountLeft = goalAmount - currentBalance;
+
+                if (daysLeft > 0 && amountLeft > 0) {
+                    calcBox.classList.remove('hidden');
+                    
+                    const perDay = amountLeft / daysLeft;
+                    const perWeek = perDay * 7;
+                    const perMonth = perDay * 30.44; // Среднее кол-во дней в месяце
+
+                    document.getElementById('calc-day').innerText = perDay.toFixed(0);
+                    document.getElementById('calc-week').innerText = perWeek.toFixed(0);
+                    document.getElementById('calc-month').innerText = perMonth.toFixed(0);
+                } else if (amountLeft <= 0) {
+                    calcBox.classList.remove('hidden');
+                    calcBox.innerHTML = '<strong style="color: #28a745;">Цель достигнута! 🎉</strong>';
+                } else {
+                    calcBox.classList.add('hidden');
+                }
+            } else {
+                calcBox.classList.add('hidden');
+            }
+            
+            saveData();
         }
     </script>
 </body>
