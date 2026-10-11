@@ -4,76 +4,207 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Финансовый трекер</title>
+    <!-- Подключаем современный шрифт Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h2, h3 { text-align: center; color: #333; margin-top: 0; }
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --border: #e5e7eb;
+            --input-bg: #f9fafb;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main);
+            margin: 0; 
+            padding: 20px; 
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container { 
+            width: 100%;
+            max-width: 600px; 
+            background: var(--card-bg); 
+            padding: 30px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01); 
+            transition: all 0.3s ease;
+        }
+
+        h2 { margin-top: 0; font-weight: 700; color: #111827; }
+        h3 { margin: 25px 0 15px; font-weight: 600; font-size: 1.1rem; color: #374151; }
+        p { color: var(--text-muted); line-height: 1.5; }
         
-        /* Стили для форм */
-        input, button, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
-        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #218838; }
-        .btn-danger { background-color: #dc3545; }
-        .btn-danger:hover { background-color: #c82333; }
+        /* Формы и инпуты */
+        input, select { 
+            width: 100%; 
+            padding: 14px 16px; 
+            margin-bottom: 12px; 
+            border-radius: 10px; 
+            border: 1px solid var(--border); 
+            background-color: var(--input-bg);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Кнопки */
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background-color: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer; 
+            transition: all 0.2s ease;
+        }
+        button:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
         
-        /* Скрытые элементы */
-        .hidden { display: none; }
+        .btn-danger { background-color: transparent; color: var(--danger); border: 1px solid var(--danger); }
+        .btn-danger:hover { background-color: var(--danger); color: white; }
+
+        /* Утилиты */
+        .hidden { display: none !important; }
         
-        /* Стили дашборда и блоков */
-        .dashboard, .goal-section { display: flex; justify-content: space-between; background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-        .dashboard div { text-align: center; width: 30%; }
-        .goal-section { display: block; }
-        
-        .transaction-list { list-style: none; padding: 0; }
-        .transaction-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; align-items: center; }
-        .income-text { color: #28a745; font-weight: bold; }
-        .expense-text { color: #dc3545; font-weight: bold; }
-        
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        /* Шапка */
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .header-top h2 { margin: 0; font-size: 1.4rem; }
+        .header-top button { width: auto; padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; }
+
+        /* Дашборд (Карточки) */
+        .dashboard { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 15px; 
+            margin-bottom: 25px; 
+        }
+        .stat-card { 
+            background: var(--input-bg); 
+            padding: 15px; 
+            border-radius: 12px; 
+            text-align: center; 
+            border: 1px solid var(--border);
+        }
+        .stat-card span { display: block; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; font-weight: 600; }
+        .stat-card div { font-size: 1.2rem; font-weight: 700; }
+        .text-green { color: var(--success) !important; }
+        .text-red { color: var(--danger) !important; }
+
+        /* Секция цели */
+        .goal-section { 
+            background: #f8fafc; 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid #e2e8f0;
+            margin-bottom: 25px; 
+        }
+        .goal-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         
         /* Прогресс-бар */
-        .progress-container { background: #ddd; border-radius: 5px; height: 20px; margin: 10px 0; overflow: hidden; width: 100%; }
-        .progress-bar { background: #28a745; height: 100%; width: 0%; transition: width 0.3s; }
-        .calc-results { background: #fff; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.9em; border: 1px solid #ccc; }
+        .progress-container { background: #e2e8f0; border-radius: 10px; height: 12px; margin: 15px 0; overflow: hidden; width: 100%; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
+        .progress-bar { background: linear-gradient(90deg, #3b82f6, #10b981); height: 100%; width: 0%; transition: width 0.5s ease-out; border-radius: 10px; }
+        .progress-text { text-align: center; font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+        
+        /* Результаты расчетов */
+        .calc-results { background: white; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 0.9rem; border: 1px dashed #cbd5e1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+        .calc-results strong { grid-column: span 3; margin-bottom: 5px; color: var(--text-main); }
+        .calc-item span { display: block; font-weight: 700; font-size: 1.1rem; color: var(--primary); }
+
+        /* Список транзакций */
+        .transaction-list { list-style: none; padding: 0; margin: 0; }
+        .transaction-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 12px 15px; margin-bottom: 8px; 
+            background: var(--input-bg); border-radius: 10px; 
+            border: 1px solid var(--border); transition: transform 0.2s;
+        }
+        .transaction-item:hover { transform: scale(1.01); background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border-color: #d1d5db; }
+        .transaction-info { font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .transaction-actions { display: flex; align-items: center; gap: 15px; }
+        .transaction-amount { font-weight: 700; font-size: 0.95rem; }
+        .btn-delete { 
+            background: #fee2e2; color: var(--danger); width: 28px; height: 28px; 
+            padding: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; 
+            font-size: 0.8rem; border: none;
+        }
+        .btn-delete:hover { background: var(--danger); color: white; }
+
+        /* Адаптивность для телефонов */
+        @media (max-width: 500px) {
+            .dashboard { grid-template-columns: 1fr; gap: 10px; }
+            .goal-inputs { grid-template-columns: 1fr; }
+            .calc-results { grid-template-columns: 1fr; text-align: left; }
+            .calc-results strong { grid-column: span 1; }
+            .calc-item { display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
+            .calc-item:last-child { border-bottom: none; }
+        }
     </style>
 </head>
 <body>
 
     <!-- ЭКРАН ВХОДА -->
     <div id="login-screen" class="container">
-        <h2>Вход в аккаунт</h2>
-        <p style="text-align: center; color: #666; font-size: 0.9em;">Данные сохраняются в вашем браузере для каждого логина отдельно</p>
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="font-size: 3rem; margin-bottom: 10px;">👋</div>
+            <h2>Добро пожаловать</h2>
+            <p style="font-size: 0.9rem; margin-top: 5px;">Ваши данные безопасно хранятся в браузере</p>
+        </div>
         <input type="text" id="username" placeholder="Придумайте логин" autocomplete="off">
         <input type="password" id="password" placeholder="Пароль (любой для демо)">
-        <button onclick="login()">Войти / Создать аккаунт</button>
+        <button onclick="login()">Войти в приложение</button>
     </div>
 
     <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
     <div id="app-screen" class="container hidden">
         <div class="header-top">
-            <h2 style="margin: 0;">Ваши финансы</h2>
-            <button onclick="logout()" class="btn-danger" style="width: auto; padding: 5px 15px; margin: 0;">Выйти (<span id="current-user-display"></span>)</button>
+            <h2>💰 Ваши финансы</h2>
+            <button onclick="logout()" class="btn-danger">Выйти (<span id="current-user-display"></span>)</button>
         </div>
 
         <div class="dashboard">
-            <div>
-                <strong>Доходы</strong>
-                <div id="total-income" class="income-text">0 ₽</div>
+            <div class="stat-card">
+                <span>Доходы</span>
+                <div id="total-income" class="text-green">0 ₽</div>
             </div>
-            <div>
-                <strong>Расходы</strong>
-                <div id="total-expense" class="expense-text">0 ₽</div>
+            <div class="stat-card">
+                <span>Расходы</span>
+                <div id="total-expense" class="text-red">0 ₽</div>
             </div>
-            <div>
-                <strong>Баланс</strong>
+            <div class="stat-card" style="background: var(--text-main); color: white; border-color: var(--text-main);">
+                <span style="color: #9ca3af;">Баланс</span>
                 <div id="total-balance">0 ₽</div>
             </div>
         </div>
 
         <!-- Цель накоплений -->
         <div class="goal-section">
-            <h3>План накоплений</h3>
-            <div style="display: flex; gap: 10px;">
+            <h3 style="margin-top: 0;">🎯 План накоплений</h3>
+            <div class="goal-inputs">
                 <input type="number" id="goal-amount" placeholder="Сумма цели (₽)" oninput="updateGoalUI()">
                 <input type="date" id="goal-date" onchange="updateGoalUI()">
             </div>
@@ -81,28 +212,30 @@
             <div class="progress-container">
                 <div id="goal-progress-bar" class="progress-bar"></div>
             </div>
-            <p id="goal-text" style="text-align: center; margin: 5px 0;">Прогресс: 0%</p>
+            <div id="goal-text" class="progress-text">Прогресс: 0%</div>
             
             <div id="goal-calculations" class="calc-results hidden">
-                <strong>Нужно откладывать:</strong><br>
-                В день: <span id="calc-day">0</span> ₽<br>
-                В неделю: <span id="calc-week">0</span> ₽<br>
-                В месяц: <span id="calc-month">0</span> ₽
+                <strong>Нужно откладывать:</strong>
+                <div class="calc-item">В день: <span id="calc-day">0 ₽</span></div>
+                <div class="calc-item">В неделю: <span id="calc-week">0 ₽</span></div>
+                <div class="calc-item">В месяц: <span id="calc-month">0 ₽</span></div>
             </div>
         </div>
 
         <!-- Добавление транзакции -->
-        <h3>Добавить операцию</h3>
-        <select id="type">
-            <option value="income">Доход</option>
-            <option value="expense">Расход</option>
-        </select>
+        <h3>➕ Добавить операцию</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <select id="type" style="flex: 1; min-width: 120px;">
+                <option value="income">🟢 Доход</option>
+                <option value="expense">🔴 Расход</option>
+            </select>
+            <input type="number" id="amount" placeholder="Сумма (₽)" style="flex: 2; min-width: 150px;">
+        </div>
         <input type="text" id="description" placeholder="Описание (например, Зарплата или Продукты)">
-        <input type="number" id="amount" placeholder="Сумма (₽)">
-        <button onclick="addTransaction()">Добавить</button>
+        <button onclick="addTransaction()" style="background-color: #111827;">Добавить запись</button>
 
         <!-- История -->
-        <h3 style="margin-top: 20px;">История операций</h3>
+        <h3 style="margin-top: 30px;">📋 История операций</h3>
         <ul id="transaction-list" class="transaction-list"></ul>
     </div>
 
@@ -140,7 +273,7 @@
         }
 
         function logout() {
-            saveData(); // Сохраняем перед выходом на всякий случай
+            saveData(); 
             currentUser = null;
             userData = { transactions: [], goalAmount: '', goalDate: '' };
             localStorage.removeItem('activeSession');
@@ -158,11 +291,11 @@
             const amount = parseFloat(document.getElementById('amount').value);
 
             if (description === '' || isNaN(amount) || amount <= 0) {
-                alert('Пожалуйста, введите корректные данные');
+                alert('Пожалуйста, введите корректное описание и сумму');
                 return;
             }
 
-            userData.transactions.push({ id: Date.now(), type, description, amount });
+            userData.transactions.unshift({ id: Date.now(), type, description, amount }); // unshift добавляет в начало списка
             
             document.getElementById('description').value = '';
             document.getElementById('amount').value = '';
@@ -177,7 +310,6 @@
 
         function saveData() {
             if (!currentUser) return;
-            // Сохраняем текущие значения инпутов цели перед записью
             userData.goalAmount = document.getElementById('goal-amount').value;
             userData.goalDate = document.getElementById('goal-date').value;
             localStorage.setItem('financeData_' + currentUser, JSON.stringify(userData));
@@ -187,7 +319,6 @@
             const savedData = localStorage.getItem('financeData_' + currentUser);
             if (savedData) {
                 userData = JSON.parse(savedData);
-                // Восстанавливаем старые данные, если они были сохранены в старом формате (только массив транзакций)
                 if (Array.isArray(userData)) {
                     userData = { transactions: userData, goalAmount: '', goalDate: '' };
                 }
@@ -201,10 +332,18 @@
             updateUI();
         }
 
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('ru-RU').format(amount);
+        }
+
         function updateUI() {
             let income = 0, expense = 0;
             const list = document.getElementById('transaction-list');
             list.innerHTML = '';
+
+            if (userData.transactions.length === 0) {
+                list.innerHTML = '<li style="text-align:center; color:#9ca3af; padding: 20px;">Операций пока нет. Добавьте первую!</li>';
+            }
 
             userData.transactions.forEach(t => {
                 if (t.type === 'income') income += t.amount;
@@ -213,28 +352,32 @@
                 const li = document.createElement('li');
                 li.className = 'transaction-item';
                 li.innerHTML = `
-                    <span>${t.description}</span>
-                    <span class="${t.type === 'income' ? 'income-text' : 'expense-text'}">
-                        ${t.type === 'income' ? '+' : '-'}${t.amount} ₽
-                    </span>
-                    <button class="btn-danger" style="width: auto; padding: 5px 10px; margin: 0; margin-left: 10px;" onclick="deleteTransaction(${t.id})">X</button>
+                    <div class="transaction-info">
+                        <span style="font-size: 1.2rem;">${t.type === 'income' ? '🟢' : '🔴'}</span>
+                        <span>${t.description}</span>
+                    </div>
+                    <div class="transaction-actions">
+                        <span class="transaction-amount ${t.type === 'income' ? 'text-green' : 'text-red'}">
+                            ${t.type === 'income' ? '+' : '-'}${formatMoney(t.amount)} ₽
+                        </span>
+                        <button class="btn-delete" onclick="deleteTransaction(${t.id})">✕</button>
+                    </div>
                 `;
                 list.appendChild(li);
             });
 
-            document.getElementById('total-income').innerText = income + ' ₽';
-            document.getElementById('total-expense').innerText = expense + ' ₽';
+            document.getElementById('total-income').innerText = formatMoney(income) + ' ₽';
+            document.getElementById('total-expense').innerText = formatMoney(expense) + ' ₽';
             
             const balance = income - expense;
-            document.getElementById('total-balance').innerText = balance + ' ₽';
-            document.getElementById('total-balance').style.color = balance >= 0 ? '#28a745' : '#dc3545';
+            document.getElementById('total-balance').innerText = formatMoney(balance) + ' ₽';
+            document.getElementById('total-balance').style.color = balance < 0 ? '#ef4444' : 'white';
             
             updateGoalUI(balance);
-            saveData(); // Сохраняем состояние при любом обновлении UI
+            saveData();
         }
 
         function updateGoalUI(currentBalance) {
-            // Если баланс не передан в функцию, высчитываем его
             if (currentBalance === undefined) {
                 let inc = 0, exp = 0;
                 userData.transactions.forEach(t => {
@@ -248,20 +391,18 @@
             const goalDateStr = document.getElementById('goal-date').value;
             const calcBox = document.getElementById('goal-calculations');
 
-            // Обновляем прогресс-бар
             if (!isNaN(goalAmount) && goalAmount > 0) {
                 let percent = (currentBalance / goalAmount) * 100;
                 if (percent < 0) percent = 0;
                 if (percent > 100) percent = 100;
                 
                 document.getElementById('goal-progress-bar').style.width = percent + '%';
-                document.getElementById('goal-text').innerText = `Прогресс: ${percent.toFixed(1)}% (${currentBalance} из ${goalAmount} ₽)`;
+                document.getElementById('goal-text').innerText = `Прогресс: ${percent.toFixed(1)}% (${formatMoney(currentBalance)} из ${formatMoney(goalAmount)} ₽)`;
             } else {
                 document.getElementById('goal-progress-bar').style.width = '0%';
-                document.getElementById('goal-text').innerText = 'Прогресс: 0%';
+                document.getElementById('goal-text').innerText = 'Задайте сумму цели, чтобы увидеть прогресс';
             }
 
-            // Расчеты по дате
             if (!isNaN(goalAmount) && goalAmount > 0 && goalDateStr) {
                 const goalDate = new Date(goalDateStr);
                 const today = new Date();
@@ -276,14 +417,14 @@
                     
                     const perDay = amountLeft / daysLeft;
                     const perWeek = perDay * 7;
-                    const perMonth = perDay * 30.44; // Среднее кол-во дней в месяце
+                    const perMonth = perDay * 30.44;
 
-                    document.getElementById('calc-day').innerText = perDay.toFixed(0);
-                    document.getElementById('calc-week').innerText = perWeek.toFixed(0);
-                    document.getElementById('calc-month').innerText = perMonth.toFixed(0);
+                    document.getElementById('calc-day').innerText = formatMoney(Math.ceil(perDay)) + ' ₽';
+                    document.getElementById('calc-week').innerText = formatMoney(Math.ceil(perWeek)) + ' ₽';
+                    document.getElementById('calc-month').innerText = formatMoney(Math.ceil(perMonth)) + ' ₽';
                 } else if (amountLeft <= 0) {
                     calcBox.classList.remove('hidden');
-                    calcBox.innerHTML = '<strong style="color: #28a745;">Цель достигнута! 🎉</strong>';
+                    calcBox.innerHTML = '<strong style="color: var(--success); font-size: 1.1rem;">🎉 Цель достигнута! Вы накопили нужную сумму.</strong>';
                 } else {
                     calcBox.classList.add('hidden');
                 }
