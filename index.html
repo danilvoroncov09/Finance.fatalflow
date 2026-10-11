@@ -3,839 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Финансовый Трекер</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: '#10B981', // Emerald 500
-                        secondary: '#3B82F6', // Blue 500
-                        dark: '#1E293B', // Slate 800
-                        light: '#F8FAFC', // Slate 50
-                    }
-                }
-            }
-        }
-    </script>
+    <title>Финансовый трекер</title>
     <style>
-        body {
-            background-color: #F3F4F6;
-            color: #334155;
-        }
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
-        .card-shadow {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        }
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-        }
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        
+        /* Стили для форм */
+        input, button, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #218838; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        
+        /* Скрытые элементы */
+        .hidden { display: none; }
+        
+        /* Стили дашборда */
+        .dashboard { display: flex; justify-content: space-between; background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .dashboard div { text-align: center; width: 30%; }
+        .transaction-list { list-style: none; padding: 0; }
+        .transaction-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; }
+        .income-text { color: #28a745; font-weight: bold; }
+        .expense-text { color: #dc3545; font-weight: bold; }
+        
+        .header-top { display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
-<body class="antialiased h-screen flex flex-col overflow-hidden">
+<body>
 
-    <div id="loading-overlay" class="fixed inset-0 bg-slate-900 bg-opacity-80 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-300">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary mb-4"></div>
-        <p class="text-lg font-medium">Загрузка данных...</p>
+    <!-- ЭКРАН ВХОДА -->
+    <div id="login-screen" class="container">
+        <h2>Вход в аккаунт</h2>
+        <p style="text-align: center; color: #666; font-size: 0.9em;">Данные сохраняются в вашем браузере для каждого логина отдельно</p>
+        <input type="text" id="username" placeholder="Придумайте логин" autocomplete="off">
+        <input type="password" id="password" placeholder="Пароль (любой для демо)">
+        <button onclick="login()">Войти / Создать аккаунт</button>
     </div>
 
-    <div id="notification-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
+    <div id="app-screen" class="container hidden">
+        <div class="header-top">
+            <h2 style="margin: 0;">Ваши финансы</h2>
+            <button onclick="logout()" class="btn-danger" style="width: auto; padding: 5px 15px; margin: 0;">Выйти (<span id="current-user-display"></span>)</button>
+        </div>
+        <hr>
 
-    <header class="glass-effect border-b border-gray-200 sticky top-0 z-40 flex-shrink-0">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2 text-primary">
-                <i class="fa-solid fa-wallet text-2xl"></i>
-                <h1 class="text-xl font-bold text-slate-800">ФинТрекер</h1>
+        <div class="dashboard">
+            <div>
+                <strong>Доходы</strong>
+                <div id="total-income" class="income-text">0 ₽</div>
             </div>
-            <div class="flex items-center gap-3">
-                <div class="hidden sm:block text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                    <i class="fa-solid fa-user text-xs mr-1"></i>
-                    <span id="user-id-display">Ожидание...</span>
-                </div>
+            <div>
+                <strong>Расходы</strong>
+                <div id="total-expense" class="expense-text">0 ₽</div>
+            </div>
+            <div>
+                <strong>Баланс</strong>
+                <div id="total-balance">0 ₽</div>
             </div>
         </div>
-    </header>
 
-    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div class="max-w-7xl mx-auto space-y-6">
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Balance Card -->
-                <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100 flex flex-col justify-between relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-10 -mt-10"></div>
-                    <div>
-                        <p class="text-sm font-medium text-slate-500 mb-1">Текущий баланс</p>
-                        <h2 id="total-balance" class="text-3xl font-bold text-slate-800">0 ₽</h2>
-                    </div>
-                    <div class="mt-4 flex items-center text-sm">
-                        <span class="text-slate-500">Доступные средства</span>
-                    </div>
-                </div>
+        <!-- Добавление транзакции -->
+        <h3>Добавить операцию</h3>
+        <select id="type">
+            <option value="income">Доход</option>
+            <option value="expense">Расход</option>
+        </select>
+        <input type="text" id="description" placeholder="Описание (например, Зарплата или Продукты)">
+        <input type="number" id="amount" placeholder="Сумма (₽)">
+        <button onclick="addTransaction()">Добавить</button>
 
-                <!-- Income Card -->
-                <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100">
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-sm font-medium text-slate-500">Доходы (всего)</p>
-                        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                            <i class="fa-solid fa-arrow-trend-up text-sm"></i>
-                        </div>
-                    </div>
-                    <h2 id="total-income" class="text-2xl font-bold text-emerald-600">0 ₽</h2>
-                </div>
+        <!-- История -->
+        <h3>История операций</h3>
+        <ul id="transaction-list" class="transaction-list"></ul>
+    </div>
 
-                <!-- Expenses Card -->
-                <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100">
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-sm font-medium text-slate-500">Расходы (всего)</p>
-                        <div class="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
-                            <i class="fa-solid fa-arrow-trend-down text-sm"></i>
-                        </div>
-                    </div>
-                    <h2 id="total-expense" class="text-2xl font-bold text-rose-600">0 ₽</h2>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                    <div>
-                        <h3 class="text-lg font-bold text-slate-800">Цель накоплений</h3>
-                        <p class="text-sm text-slate-500">Отслеживайте прогресс к вашей финансовой цели</p>
-                    </div>
-                    <button id="btn-edit-goal" class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-4 rounded-lg transition-colors font-medium border border-slate-200">
-                        <i class="fa-solid fa-pen mr-1"></i> Изменить цель
-                    </button>
-                </div>
-                
-                <div id="goal-edit-form" class="hidden mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-3 items-end">
-                    <div class="w-full sm:w-1/3">
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Сумма цели (₽)</label>
-                        <input type="number" id="goal-input" placeholder="Например: 500000" class="w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary outline-none transition-all">
-                    </div>
-                    <div class="w-full sm:w-1/3">
-                        <label class="block text-xs font-medium text-slate-500 mb-1">К какой дате?</label>
-                        <input type="date" id="goal-date-input" class="w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary outline-none transition-all">
-                    </div>
-                    <div class="flex gap-2 w-full sm:w-1/3">
-                        <button id="btn-save-goal" class="flex-1 bg-primary hover:bg-emerald-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors">Сохранить</button>
-                        <button id="btn-cancel-goal" class="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-slate-700 py-2 px-4 rounded-lg text-sm font-medium transition-colors">Отмена</button>
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="font-medium text-slate-700" id="goal-progress-text">0 ₽ из 0 ₽</span>
-                        <span class="font-bold text-primary" id="goal-percentage">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden border border-slate-200">
-                        <div id="goal-progress-bar" class="bg-gradient-to-r from-emerald-400 to-primary h-4 rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <!-- План накоплений (Savings Plan) -->
-                <div id="savings-plan-container" class="mt-6 pt-5 border-t border-slate-100 hidden">
-                    <div class="flex items-center justify-between mb-3">
-                        <h4 class="text-sm font-bold text-slate-700">План накоплений:</h4>
-                        <span id="plan-deadline-badge" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200 font-medium"></span>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <p class="text-xs text-slate-500 mb-1 font-medium">Осталось собрать</p>
-                            <p class="text-lg font-bold text-slate-800" id="plan-remaining">0 ₽</p>
-                        </div>
-                        <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                            <p class="text-xs text-blue-600/70 mb-1 font-medium">Откладывать в день</p>
-                            <p class="text-lg font-bold text-blue-600" id="plan-daily">0 ₽</p>
-                        </div>
-                        <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                            <p class="text-xs text-indigo-600/70 mb-1 font-medium">В неделю</p>
-                            <p class="text-lg font-bold text-indigo-600" id="plan-weekly">0 ₽</p>
-                        </div>
-                        <div class="bg-violet-50/50 p-4 rounded-xl border border-violet-100">
-                            <p class="text-xs text-violet-600/70 mb-1 font-medium">В месяц</p>
-                            <p class="text-lg font-bold text-violet-600" id="plan-monthly">0 ₽</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-12">
-                
-                <!-- Left Column: Add Form -->
-                <div class="lg:col-span-1 space-y-6">
-                    <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100">
-                        <h3 class="text-lg font-bold text-slate-800 mb-4">Новая операция</h3>
-                        
-                        <form id="transaction-form" class="space-y-4">
-                            <!-- Type Toggle -->
-                            <div class="flex p-1 bg-slate-100 rounded-xl">
-                                <label class="flex-1 text-center cursor-pointer">
-                                    <input type="radio" name="tx-type" value="expense" class="peer sr-only" checked>
-                                    <div class="py-2 px-4 rounded-lg text-sm font-medium text-slate-500 peer-checked:bg-white peer-checked:text-rose-600 peer-checked:shadow-sm transition-all">
-                                        Расход
-                                    </div>
-                                </label>
-                                <label class="flex-1 text-center cursor-pointer">
-                                    <input type="radio" name="tx-type" value="income" class="peer sr-only">
-                                    <div class="py-2 px-4 rounded-lg text-sm font-medium text-slate-500 peer-checked:bg-white peer-checked:text-emerald-600 peer-checked:shadow-sm transition-all">
-                                        Доход
-                                    </div>
-                                </label>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-slate-500 mb-1">Сумма (₽) *</label>
-                                <input type="number" id="tx-amount" required min="0.01" step="0.01" class="w-full rounded-lg border-gray-300 border px-3 py-2 outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-slate-500 mb-1">Категория *</label>
-                                <select id="tx-category" required class="w-full rounded-lg border-gray-300 border px-3 py-2 outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-white">
-                                    <!-- Options populated by JS based on type -->
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-slate-500 mb-1">Дата *</label>
-                                <input type="date" id="tx-date" required class="w-full rounded-lg border-gray-300 border px-3 py-2 outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm">
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-slate-500 mb-1">Описание</label>
-                                <input type="text" id="tx-desc" placeholder="Краткое описание" class="w-full rounded-lg border-gray-300 border px-3 py-2 outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm">
-                            </div>
-
-                            <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded-xl font-medium transition-colors mt-2 shadow-md">
-                                Добавить операцию
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Chart Card (Moved here for better layout on desktop) -->
-                    <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100">
-                        <h3 class="text-lg font-bold text-slate-800 mb-4">Структура расходов</h3>
-                        <div class="relative h-64 w-full flex items-center justify-center">
-                            <canvas id="expenses-chart"></canvas>
-                            <div id="no-chart-data" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm hidden">
-                                Нет данных о расходах
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Transaction History -->
-                <div class="lg:col-span-2">
-                    <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100 h-full min-h-[500px] flex flex-col">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-lg font-bold text-slate-800">История операций</h3>
-                        </div>
-                        
-                        <div class="flex-1 overflow-auto pr-2" id="transactions-list-container">
-                            <!-- Transactions will be injected here -->
-                            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center text-slate-500 hidden py-12">
-                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                                    <i class="fa-solid fa-receipt text-2xl text-slate-400"></i>
-                                </div>
-                                <p class="font-medium">Нет операций</p>
-                                <p class="text-sm mt-1">Добавьте свою первую транзакцию с помощью формы.</p>
-                            </div>
-
-                            <div id="transactions-list" class="space-y-3">
-                                <!-- Transaction Items -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global configuration from environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-finance-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            // Fallback empty config if testing locally without environment injected
-        };
-
-        let app, db, auth, currentUserId;
+    <script>
+        let currentUser = null;
         let transactions = [];
-        let savingsGoal = 0;
-        let savingsDeadline = null;
-        let chartInstance = null;
-        let unsubscribeTransactions = null;
-        let unsubscribeSettings = null;
 
-        // Categories configuration
-        const categories = {
-            expense: [
-                { id: 'groceries', name: 'Продукты', color: '#F87171' }, // Red 400
-                { id: 'housing', name: 'Жилье', color: '#60A5FA' }, // Blue 400
-                { id: 'transport', name: 'Транспорт', color: '#FBBF24' }, // Amber 400
-                { id: 'entertainment', name: 'Развлечения', color: '#C084FC' }, // Purple 400
-                { id: 'health', name: 'Здоровье', color: '#34D399' }, // Emerald 400
-                { id: 'other_exp', name: 'Другое', color: '#94A3B8' } // Slate 400
-            ],
-            income: [
-                { id: 'salary', name: 'Зарплата' },
-                { id: 'gifts', name: 'Подарки' },
-                { id: 'investments', name: 'Инвестиции' },
-                { id: 'other_inc', name: 'Другое' }
-            ]
+        // Проверка, есть ли уже активная сессия при загрузке страницы
+        window.onload = function() {
+            const savedUser = localStorage.getItem('activeSession');
+            if (savedUser) {
+                document.getElementById('username').value = savedUser;
+                login();
+            }
         };
 
-        function showNotification(message, type = 'success') {
-            const container = document.getElementById('notification-container');
-            const notif = document.createElement('div');
+        // Логика авторизации
+        function login() {
+            const usernameInput = document.getElementById('username').value.trim();
+            if (usernameInput === '') {
+                alert('Пожалуйста, введите логин');
+                return;
+            }
             
-            const colors = {
-                success: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-                error: 'bg-rose-50 text-rose-800 border-rose-200',
-                info: 'bg-blue-50 text-blue-800 border-blue-200'
-            };
-
-            const icons = {
-                success: 'fa-check-circle text-emerald-500',
-                error: 'fa-circle-exclamation text-rose-500',
-                info: 'fa-info-circle text-blue-500'
-            };
-
-            notif.className = `flex items-center p-4 mb-2 rounded-xl shadow-lg border ${colors[type]} transform transition-all duration-300 translate-y-[-100%] opacity-0 pointer-events-auto`;
-            notif.innerHTML = `
-                <i class="fa-solid ${icons[type]} mr-3 text-lg"></i>
-                <span class="text-sm font-medium">${message}</span>
-            `;
+            currentUser = usernameInput;
+            localStorage.setItem('activeSession', currentUser); // Запоминаем сессию
+            document.getElementById('current-user-display').innerText = currentUser;
             
-            container.appendChild(notif);
+            // Загружаем данные пользователя
+            loadData();
+
+            // Переключаем экраны
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+        }
+
+        // Логика выхода
+        function logout() {
+            currentUser = null;
+            transactions = [];
+            localStorage.removeItem('activeSession');
             
-            // Animate in
-            requestAnimationFrame(() => {
-                notif.classList.remove('translate-y-[-100%]', 'opacity-0');
-            });
-
-            // Remove after 3 seconds
-            setTimeout(() => {
-                notif.classList.add('opacity-0', 'translate-x-full');
-                setTimeout(() => notif.remove(), 300);
-            }, 3000);
+            // Очищаем поля ввода
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            
+            // Переключаем экраны
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
         }
 
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(amount);
-        }
+        // Добавление транзакции
+        function addTransaction() {
+            const type = document.getElementById('type').value;
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
 
-        function formatDate(dateString) {
-            const options = { day: 'numeric', month: 'short', year: 'numeric' };
-            return new Date(dateString).toLocaleDateString('ru-RU', options);
-        }
-
-        function getCategoryName(id, type) {
-            const cats = categories[type] || [];
-            const cat = cats.find(c => c.id === id);
-            return cat ? cat.name : 'Неизвестно';
-        }
-
-        function updateDashboard() {
-            let totalInc = 0;
-            let totalExp = 0;
-
-            transactions.forEach(tx => {
-                if (tx.type === 'income') totalInc += Number(tx.amount);
-                if (tx.type === 'expense') totalExp += Number(tx.amount);
-            });
-
-            const balance = totalInc - totalExp;
-
-            document.getElementById('total-balance').textContent = formatCurrency(balance);
-            document.getElementById('total-income').textContent = formatCurrency(totalInc);
-            document.getElementById('total-expense').textContent = formatCurrency(totalExp);
-
-            // Update Goal Progress
-            updateGoalProgress(balance);
-        }
-
-        function updateGoalProgress(currentBalance) {
-            const progressText = document.getElementById('goal-progress-text');
-            const percentageText = document.getElementById('goal-percentage');
-            const progressBar = document.getElementById('goal-progress-bar');
-            const goalInput = document.getElementById('goal-input');
-            const dateInput = document.getElementById('goal-date-input');
-            const planContainer = document.getElementById('savings-plan-container');
-
-            // Sync input if empty
-            if (!goalInput.value) goalInput.value = savingsGoal || '';
-            if (!dateInput.value && savingsDeadline) dateInput.value = savingsDeadline;
-
-            if (!savingsGoal || savingsGoal <= 0) {
-                progressText.textContent = `Цель не установлена`;
-                percentageText.textContent = `0%`;
-                progressBar.style.width = `0%`;
-                planContainer.classList.add('hidden');
+            if (description === '' || isNaN(amount) || amount <= 0) {
+                alert('Пожалуйста, введите корректные данные');
                 return;
             }
 
-            const clampedBalance = Math.max(0, currentBalance);
-            let percent = (clampedBalance / savingsGoal) * 100;
-            if (percent > 100) percent = 100;
+            const transaction = { id: Date.now(), type, description, amount };
+            transactions.push(transaction);
+            
+            saveData();
+            updateUI();
+            
+            // Очистка полей
+            document.getElementById('description').value = '';
+            document.getElementById('amount').value = '';
+        }
 
-            progressText.textContent = `${formatCurrency(clampedBalance)} из ${formatCurrency(savingsGoal)}`;
-            percentageText.textContent = `${percent.toFixed(0)}%`;
-            progressBar.style.width = `${percent}%`;
+        // Удаление транзакции
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveData();
+            updateUI();
+        }
 
-            // Change color if goal reached
-            if (percent >= 100) {
-                progressBar.classList.remove('from-emerald-400', 'to-primary');
-                progressBar.classList.add('bg-yellow-400'); // Gold for celebration
-                planContainer.classList.add('hidden');
+        // Сохранение данных в localStorage (привязка к логину)
+        function saveData() {
+            if (!currentUser) return;
+            localStorage.setItem('financeData_' + currentUser, JSON.stringify(transactions));
+        }
+
+        // Загрузка данных из localStorage
+        function loadData() {
+            const savedData = localStorage.getItem('financeData_' + currentUser);
+            if (savedData) {
+                transactions = JSON.parse(savedData);
             } else {
-                progressBar.classList.add('from-emerald-400', 'to-primary');
-                progressBar.classList.remove('bg-yellow-400');
-                
-                // Calculate Savings Plan
-                calculateSavingsPlan(clampedBalance);
+                transactions = []; // Если новый пользователь
             }
+            updateUI();
         }
 
-        function calculateSavingsPlan(currentBalance) {
-            const planContainer = document.getElementById('savings-plan-container');
-            
-            if (!savingsDeadline) {
-                planContainer.classList.add('hidden');
-                return;
-            }
+        // Обновление интерфейса (цифры и списки)
+        function updateUI() {
+            let income = 0, expense = 0;
+            const list = document.getElementById('transaction-list');
+            list.innerHTML = '';
 
-            const remainingAmount = Math.max(0, savingsGoal - currentBalance);
-            if (remainingAmount === 0) {
-                planContainer.classList.add('hidden');
-                return;
-            }
+            transactions.forEach(t => {
+                if (t.type === 'income') income += t.amount;
+                if (t.type === 'expense') expense += t.amount;
 
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const deadlineDate = new Date(savingsDeadline);
-            deadlineDate.setHours(0, 0, 0, 0);
-
-            const timeDiff = deadlineDate.getTime() - today.getTime();
-            const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-            const badge = document.getElementById('plan-deadline-badge');
-            const elRemaining = document.getElementById('plan-remaining');
-            const elDaily = document.getElementById('plan-daily');
-            const elWeekly = document.getElementById('plan-weekly');
-            const elMonthly = document.getElementById('plan-monthly');
-
-            elRemaining.textContent = formatCurrency(remainingAmount);
-
-            if (daysRemaining <= 0) {
-                badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-500 mr-1"></i> Дедлайн прошел`;
-                elDaily.textContent = '—';
-                elWeekly.textContent = '—';
-                elMonthly.textContent = '—';
-                planContainer.classList.remove('hidden');
-                return;
-            }
-
-            badge.textContent = `Осталось дней: ${daysRemaining}`;
-
-            // Calculate amounts
-            const daily = remainingAmount / daysRemaining;
-            const weekly = daysRemaining >= 7 ? remainingAmount / (daysRemaining / 7) : remainingAmount;
-            const monthly = daysRemaining >= 30 ? remainingAmount / (daysRemaining / 30.436875) : remainingAmount; // Average days in month
-
-            elDaily.textContent = formatCurrency(daily);
-            elWeekly.textContent = formatCurrency(weekly);
-            elMonthly.textContent = formatCurrency(monthly);
-            
-            planContainer.classList.remove('hidden');
-        }
-
-        function renderTransactionsList() {
-            const listEl = document.getElementById('transactions-list');
-            const emptyState = document.getElementById('empty-state');
-            
-            listEl.innerHTML = '';
-            
-            if (transactions.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-            
-            emptyState.classList.add('hidden');
-
-            // Sort transactions by date descending in memory
-            const sortedTx = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            sortedTx.forEach(tx => {
-                const isIncome = tx.type === 'income';
-                const sign = isIncome ? '+' : '-';
-                const colorClass = isIncome ? 'text-emerald-600' : 'text-slate-800';
-                const iconClass = isIncome ? 'fa-arrow-trend-up text-emerald-500 bg-emerald-50' : 'fa-basket-shopping text-rose-500 bg-rose-50';
-                
-                const item = document.createElement('div');
-                item.className = 'flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white hover:shadow-md transition-shadow group';
-                
-                item.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${iconClass}">
-                            <i class="fa-solid ${iconClass.split(' ')[0]}"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium text-slate-800">${getCategoryName(tx.category, tx.type)}</p>
-                            <p class="text-xs text-slate-500 flex gap-2">
-                                <span>${formatDate(tx.date)}</span>
-                                ${tx.description ? `<span class="truncate max-w-[150px] sm:max-w-xs">&bull; ${tx.description}</span>` : ''}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <span class="font-semibold ${colorClass}">${sign}${formatCurrency(tx.amount)}</span>
-                        <button onclick="window.deleteTransaction('${tx.id}')" class="text-slate-300 hover:text-rose-500 transition-colors focus:outline-none opacity-0 group-hover:opacity-100" title="Удалить">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
+                const li = document.createElement('li');
+                li.className = 'transaction-item';
+                li.innerHTML = `
+                    <span>${t.description}</span>
+                    <span class="${t.type === 'income' ? 'income-text' : 'expense-text'}">
+                        ${t.type === 'income' ? '+' : '-'}${t.amount} ₽
+                    </span>
+                    <button class="btn-danger" style="width: auto; padding: 5px 10px; margin: 0; margin-left: 10px;" onclick="deleteTransaction(${t.id})">X</button>
                 `;
-                listEl.appendChild(item);
+                list.appendChild(li);
             });
-        }
 
-        function updateChart() {
-            const ctx = document.getElementById('expenses-chart');
-            const noDataEl = document.getElementById('no-chart-data');
+            document.getElementById('total-income').innerText = income + ' ₽';
+            document.getElementById('total-expense').innerText = expense + ' ₽';
             
-            const expenses = transactions.filter(t => t.type === 'expense');
-            
-            if (expenses.length === 0) {
-                if (chartInstance) chartInstance.destroy();
-                chartInstance = null;
-                noDataEl.classList.remove('hidden');
-                return;
-            }
-            
-            noDataEl.classList.add('hidden');
-
-            // Aggregate by category
-            const dataMap = {};
-            expenses.forEach(ex => {
-                dataMap[ex.category] = (dataMap[ex.category] || 0) + Number(ex.amount);
-            });
-
-            const labels = [];
-            const dataPoints = [];
-            const backgroundColors = [];
-
-            categories.expense.forEach(cat => {
-                if (dataMap[cat.id]) {
-                    labels.push(cat.name);
-                    dataPoints.push(dataMap[cat.id]);
-                    backgroundColors.push(cat.color);
-                }
-            });
-
-            if (chartInstance) {
-                chartInstance.data.labels = labels;
-                chartInstance.data.datasets[0].data = dataPoints;
-                chartInstance.data.datasets[0].backgroundColor = backgroundColors;
-                chartInstance.update();
-            } else {
-                chartInstance = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: dataPoints,
-                            backgroundColor: backgroundColors,
-                            borderWidth: 0,
-                            hoverOffset: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 20,
-                                    font: { family: "'Inter', sans-serif", size: 12 }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        if (context.parsed !== null) {
-                                            label += new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(context.parsed);
-                                        }
-                                        return label;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+            const balance = income - expense;
+            document.getElementById('total-balance').innerText = balance + ' ₽';
+            document.getElementById('total-balance').style.color = balance >= 0 ? '#28a745' : '#dc3545';
         }
-
-        function refreshAllUI() {
-            updateDashboard();
-            renderTransactionsList();
-            updateChart();
-        }
-
-        function setupEventListeners() {
-            // Transaction Form Type Toggle
-            const typeRadios = document.querySelectorAll('input[name="tx-type"]');
-            const categorySelect = document.getElementById('tx-category');
-            
-            function populateCategories() {
-                const selectedType = document.querySelector('input[name="tx-type"]:checked').value;
-                const options = categories[selectedType];
-                
-                categorySelect.innerHTML = '<option value="" disabled selected>Выберите категорию...</option>';
-                options.forEach(opt => {
-                    const el = document.createElement('option');
-                    el.value = opt.id;
-                    el.textContent = opt.name;
-                    categorySelect.appendChild(el);
-                });
-            }
-
-            typeRadios.forEach(radio => radio.addEventListener('change', populateCategories));
-            
-            // Initial population
-            populateCategories();
-            document.getElementById('tx-date').valueAsDate = new Date(); // Set today as default
-
-            // Transaction Form Submit
-            const form = document.getElementById('transaction-form');
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (!currentUserId) return showNotification('Пользователь не авторизован', 'error');
-
-                const type = document.querySelector('input[name="tx-type"]:checked').value;
-                const amount = document.getElementById('tx-amount').value;
-                const category = document.getElementById('tx-category').value;
-                const date = document.getElementById('tx-date').value;
-                const desc = document.getElementById('tx-desc').value;
-
-                if (!category) {
-                    return showNotification('Пожалуйста, выберите категорию', 'error');
-                }
-
-                const submitBtn = form.querySelector('button[type="submit"]');
-                const originalText = submitBtn.textContent;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Сохранение...';
-
-                try {
-                    const txRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'transactions');
-                    await addDoc(txRef, {
-                        type,
-                        amount: Number(amount),
-                        category,
-                        date,
-                        description: desc,
-                        createdAt: new Date().toISOString()
-                    });
-                    
-                    form.reset();
-                    document.getElementById('tx-date').valueAsDate = new Date();
-                    populateCategories();
-                    showNotification('Операция успешно добавлена');
-                } catch (error) {
-                    console.error("Error adding transaction:", error);
-                    showNotification('Ошибка при сохранении', 'error');
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = originalText;
-                }
-            });
-
-            // Goal Edit Interactions
-            const btnEditGoal = document.getElementById('btn-edit-goal');
-            const btnSaveGoal = document.getElementById('btn-save-goal');
-            const btnCancelGoal = document.getElementById('btn-cancel-goal');
-            const goalForm = document.getElementById('goal-edit-form');
-            const goalInput = document.getElementById('goal-input');
-            const dateInput = document.getElementById('goal-date-input');
-
-            btnEditGoal.addEventListener('click', () => {
-                goalForm.classList.remove('hidden');
-                btnEditGoal.classList.add('hidden');
-                goalInput.focus();
-            });
-
-            btnCancelGoal.addEventListener('click', () => {
-                goalForm.classList.add('hidden');
-                btnEditGoal.classList.remove('hidden');
-                goalInput.value = savingsGoal || '';
-                dateInput.value = savingsDeadline || '';
-            });
-
-            btnSaveGoal.addEventListener('click', async () => {
-                if (!currentUserId) return;
-                const newGoal = Number(goalInput.value);
-                const newDate = dateInput.value;
-                
-                if (newGoal < 0) return showNotification('Цель не может быть отрицательной', 'error');
-
-                btnSaveGoal.disabled = true;
-                btnSaveGoal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
-                try {
-                    const profileRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'settings', 'profile');
-                    await setDoc(profileRef, { 
-                        savingsGoal: newGoal,
-                        savingsDeadline: newDate || null 
-                    }, { merge: true });
-                    
-                    goalForm.classList.add('hidden');
-                    btnEditGoal.classList.remove('hidden');
-                    showNotification('Цель и сроки обновлены');
-                } catch (error) {
-                    console.error("Error saving goal:", error);
-                    showNotification('Ошибка сохранения цели', 'error');
-                } finally {
-                    btnSaveGoal.disabled = false;
-                    btnSaveGoal.textContent = 'Сохранить';
-                }
-            });
-        }
-
-        // Expose delete function to window for inline onclick handler
-        window.deleteTransaction = async (txId) => {
-            if (!currentUserId) return;
-            // Removed confirm() as per rules, using direct action. In a full app, a custom modal would be better.
-            try {
-                const txRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'transactions', txId);
-                await deleteDoc(txRef);
-                showNotification('Операция удалена', 'info');
-            } catch (error) {
-                console.error("Error deleting transaction:", error);
-                showNotification('Ошибка удаления', 'error');
-            }
-        };
-
-        async function initializeAppWithAuth() {
-            try {
-                if (Object.keys(firebaseConfig).length > 0) {
-                    app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
-
-                    // Start Auth Flow
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            currentUserId = user.uid;
-                            document.getElementById('user-id-display').textContent = `Пользователь: ${user.uid.substring(0, 6)}...`;
-                            startDataListeners();
-                        } else {
-                            // User logged out
-                            currentUserId = null;
-                            if(unsubscribeTransactions) unsubscribeTransactions();
-                            if(unsubscribeSettings) unsubscribeSettings();
-                        }
-                    });
-                } else {
-                    // Fallback local mode (mock) if no firebase config
-                    console.warn("No Firebase config found. Running in UI-only mode.");
-                    document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
-                    setupEventListeners();
-                }
-            } catch (error) {
-                console.error("Initialization error:", error);
-                showNotification("Ошибка инициализации базы данных", 'error');
-                document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
-            }
-        }
-
-        function startDataListeners() {
-            if (!currentUserId || !db) return;
-
-            // 1. Listen to Transactions
-            const txRef = collection(db, 'artifacts', appId, 'users', currentUserId, 'transactions');
-            // RULE: Fetch all data with simple collection() queries, then filter/sort in JS
-            unsubscribeTransactions = onSnapshot(txRef, (snapshot) => {
-                transactions = [];
-                snapshot.forEach((doc) => {
-                    transactions.push({ id: doc.id, ...doc.data() });
-                });
-                refreshAllUI();
-                
-                // Hide loading overlay on first load
-                const loader = document.getElementById('loading-overlay');
-                if (!loader.classList.contains('opacity-0')) {
-                    loader.classList.add('opacity-0', 'pointer-events-none');
-                }
-            }, (error) => {
-                console.error("Transactions sync error:", error);
-                showNotification("Ошибка синхронизации данных", "error");
-            });
-
-            // 2. Listen to Settings (Goal)
-            const profileRef = doc(db, 'artifacts', appId, 'users', currentUserId, 'settings', 'profile');
-            unsubscribeSettings = onSnapshot(profileRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    let updateNeeded = false;
-                    
-                    if (data.savingsGoal !== undefined && data.savingsGoal !== savingsGoal) {
-                        savingsGoal = data.savingsGoal;
-                        updateNeeded = true;
-                    }
-                    if (data.savingsDeadline !== undefined && data.savingsDeadline !== savingsDeadline) {
-                        savingsDeadline = data.savingsDeadline;
-                        updateNeeded = true;
-                    }
-                    
-                    if (updateNeeded) {
-                        updateDashboard(); // Re-trigger UI update for the goal progress and plan
-                    }
-                }
-            }, (error) => {
-                console.error("Settings sync error:", error);
-            });
-        }
-
-        // Start initialization
-        setupEventListeners();
-        initializeAppWithAuth();
-
     </script>
 </body>
 </html>
